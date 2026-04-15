@@ -161,16 +161,16 @@ export function ThresholdPage() {
     }
 
     // Convert temperature from display unit to Celsius for storage
-    let tempLower = parseFloat(localThresholds.temperature.lower) || 18.3;
-    let tempUpper = parseFloat(localThresholds.temperature.upper) || 26.7;
+    let tempLower = isNaN(parseFloat(localThresholds.temperature.lower)) ? 18.3 : parseFloat(localThresholds.temperature.lower);
+    let tempUpper = isNaN(parseFloat(localThresholds.temperature.upper)) ? 26.7 : parseFloat(localThresholds.temperature.upper);
     if (tempUnit === "F") {
       tempLower = fahrenheitToCelsius(tempLower);
       tempUpper = fahrenheitToCelsius(tempUpper);
     }
 
     // Convert water level from display unit to cm for storage
-    let waterLower = parseFloat(localThresholds.waterLevel.lower) || 70;
-    let waterUpper = parseFloat(localThresholds.waterLevel.upper) || 95;
+    let waterLower = isNaN(parseFloat(localThresholds.waterLevel.lower)) ? 70 : parseFloat(localThresholds.waterLevel.lower);
+    let waterUpper = isNaN(parseFloat(localThresholds.waterLevel.upper)) ? 95 : parseFloat(localThresholds.waterLevel.upper);
     if (waterLevelUnit === "in") {
       waterLower = inchesToCm(waterLower);
       waterUpper = inchesToCm(waterUpper);
@@ -178,34 +178,34 @@ export function ThresholdPage() {
 
     const thresholds = {
       ec: {
-        lower: parseFloat(localThresholds.ec.lower) || 1000,
-        upper: parseFloat(localThresholds.ec.upper) || 1800,
+        lower: isNaN(parseFloat(localThresholds.ec.lower)) ? 1000 : parseFloat(localThresholds.ec.lower),
+        upper: isNaN(parseFloat(localThresholds.ec.upper)) ? 1800 : parseFloat(localThresholds.ec.upper),
       },
       ph: {
-        lower: parseFloat(localThresholds.ph.lower) || 6.5,
-        upper: parseFloat(localThresholds.ph.upper) || 8.5,
+        lower: isNaN(parseFloat(localThresholds.ph.lower)) ? 6.5 : parseFloat(localThresholds.ph.lower),
+        upper: isNaN(parseFloat(localThresholds.ph.upper)) ? 8.5 : parseFloat(localThresholds.ph.upper),
       },
       temperature: {
         lower: tempLower,
         upper: tempUpper,
       },
       o2: {
-        lower: parseFloat(localThresholds.o2.lower) || 6,
-        upper: parseFloat(localThresholds.o2.upper) || 12,
+        lower: isNaN(parseFloat(localThresholds.o2.lower)) ? 6 : parseFloat(localThresholds.o2.lower),
+        upper: isNaN(parseFloat(localThresholds.o2.upper)) ? 12 : parseFloat(localThresholds.o2.upper),
       },
       waterLevel: {
         lower: waterLower,
         upper: waterUpper,
       },
       transpiration: {
-        lower: parseFloat(localThresholds.transpiration.lower) || 2,
-        upper: parseFloat(localThresholds.transpiration.upper) || 5,
+        lower: isNaN(parseFloat(localThresholds.transpiration.lower)) ? 2 : parseFloat(localThresholds.transpiration.lower),
+        upper: isNaN(parseFloat(localThresholds.transpiration.upper)) ? 5 : parseFloat(localThresholds.transpiration.upper),
       },
     };
 
     const setpoints = {
-      ec: parseFloat(localSetpoints.ec) || 1500,
-      ph: parseFloat(localSetpoints.ph) || 7.0,
+      ec: isNaN(parseFloat(localSetpoints.ec)) ? 1500 : parseFloat(localSetpoints.ec),
+      ph: isNaN(parseFloat(localSetpoints.ph)) ? 7.0 : parseFloat(localSetpoints.ph),
     };
 
     setContextThresholds(thresholds);
