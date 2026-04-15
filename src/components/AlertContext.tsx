@@ -112,19 +112,30 @@ export function AlertProvider({ children }: { children: ReactNode }) {
           activeAlertsRef.current.set("network", historyEntry);
           setAlertHistory((prev) => [historyEntry, ...prev].slice(0, 10000));
 
-          // Persist to Supabase
+          // Only insert if no open network alert already exists in Supabase
+          // (prevents duplicate rows when multiple tabs/devices are open)
           supabase
             .from("alert_history")
-            .insert({
-              alert_type: "network",
-              severity: "critical",
-              message: "No Data Received — Check Network Connection",
-              start_time: new Date(now).toISOString(),
-              end_time: null,
-              duration_ms: null,
-            })
-            .then(({ error }) => {
-              if (error) console.error("Failed to insert network alert:", error);
+            .select("id")
+            .eq("alert_type", "network")
+            .is("end_time", null)
+            .limit(1)
+            .then(({ data, error }) => {
+              if (error) { console.error("Failed to check for existing network alert:", error); return; }
+              if (data && data.length > 0) return; // already an open one, skip insert
+              supabase
+                .from("alert_history")
+                .insert({
+                  alert_type: "network",
+                  severity: "critical",
+                  message: "No Data Received — Check Network Connection",
+                  start_time: new Date(now).toISOString(),
+                  end_time: null,
+                  duration_ms: null,
+                })
+                .then(({ error: insertError }) => {
+                  if (insertError) console.error("Failed to insert network alert:", insertError);
+                });
             });
         }
       } else {
