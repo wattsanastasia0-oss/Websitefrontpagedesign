@@ -89,16 +89,15 @@ export function TemperaturePage() {
   
   const currentTemp = latestReading ? convertTemp(latestReading.temperature) : null;
   
-  // Determine status based on typical range
-  const getStatus = (value: number) => {
-    // Convert to Fahrenheit for comparison if needed
-    const tempF = tempUnit === "F" ? value : (value * 9 / 5) + 32;
-    if (tempF < 65 || tempF > 80) return { label: "Warning", variant: "destructive" as const };
-    if (tempF < 68 || tempF > 78) return { label: "Caution", variant: "secondary" as const };
+  // Determine status based on configured thresholds (thresholds are stored in Celsius)
+  const getStatus = (tempC: number) => {
+    if (tempC < thresholds.temperature.lower || tempC > thresholds.temperature.upper) {
+      return { label: "Warning", variant: "destructive" as const };
+    }
     return { label: "Normal", variant: "default" as const };
   };
   
-  const status = currentTemp !== null ? getStatus(currentTemp) : null;
+  const status = latestReading ? getStatus(latestReading.temperature) : null;
   
   const optimalRange = `${convertTemp(thresholds.temperature.lower).toFixed(1)} - ${convertTemp(thresholds.temperature.upper).toFixed(1)}`;
   

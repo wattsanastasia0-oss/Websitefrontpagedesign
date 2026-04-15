@@ -45,6 +45,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   const [lastDataTimestamp, setLastDataTimestamp] = useState<number>(Date.now());
   const lastCheckedReadingRef = useRef<number>(0);
   const activeAlertsRef = useRef<Map<string, AlertHistoryEntry>>(new Map());
+  const closedOrphanedNetworkRef = useRef(false);
 
   // Load alert history from Supabase
   useEffect(() => {
@@ -153,6 +154,30 @@ export function AlertProvider({ children }: { children: ReactNode }) {
             .is("end_time", null)
             .then(({ error }) => {
               if (error) console.error("Failed to close network alert:", error);
+            });
+        } else if (!closedOrphanedNetworkRef.current) {
+          // Close any unclosed network alerts left open from a previous session.
+          // This happens when the page is reloaded after a network outage — the old
+          // Supabase record has end_time = null but activeAlertsRef is empty.
+          closedOrphanedNetworkRef.current = true;
+
+          setAlertHistory((prev) => {
+            const hasOpen = prev.some((e) => e.type === "network" && !e.endTime);
+            if (!hasOpen) return prev;
+            return prev.map((e) =>
+              e.type === "network" && !e.endTime
+                ? { ...e, endTime: now, duration: now - e.startTime }
+                : e
+            );
+          });
+
+          supabase
+            .from("alert_history")
+            .update({ end_time: new Date(now).toISOString() })
+            .eq("alert_type", "network")
+            .is("end_time", null)
+            .then(({ error }) => {
+              if (error) console.error("Failed to close stale network alert:", error);
             });
         }
       }
