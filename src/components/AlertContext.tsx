@@ -389,9 +389,15 @@ export function AlertProvider({ children }: { children: ReactNode }) {
 
   // Merge active (ongoing) alerts into history so they appear on the history page
   const fullAlertHistory = useMemo(() => {
+    // Types already tracked as open in Supabase — don't double-count from activeAlertsRef
+    const supabaseActiveTypes = new Set(
+      alertHistory.filter((e) => !e.endTime).map((e) => e.type)
+    );
     const activeEntries: AlertHistoryEntry[] = [];
     activeAlertsRef.current.forEach((entry) => {
-      activeEntries.push({ ...entry });
+      if (!supabaseActiveTypes.has(entry.type)) {
+        activeEntries.push({ ...entry });
+      }
     });
     // Active alerts first (no endTime), then ended alerts
     return [...activeEntries, ...alertHistory];
