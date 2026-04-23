@@ -148,12 +148,15 @@ export function AlertProvider({ children }: { children: ReactNode }) {
         const networkEntry = activeAlertsRef.current.get("network");
         if (networkEntry) {
           const duration = now - networkEntry.startTime;
-          const endedEntry = { ...networkEntry, endTime: now, duration };
           activeAlertsRef.current.delete("network");
           setAlertHistory((prev) => {
-            // Replace the open network entry with the closed one
-            const filtered = prev.filter((e) => e.id !== networkEntry.id);
-            return [endedEntry, ...filtered].slice(0, 10000);
+            // Close ALL open network entries (the in-memory one just added AND
+            // any Supabase-loaded entry from a previous session that also lacks endTime)
+            return prev.map((e) =>
+              e.type === "network" && !e.endTime
+                ? { ...e, endTime: now, duration: now - e.startTime }
+                : e
+            ).slice(0, 10000);
           });
 
           // Close in Supabase
