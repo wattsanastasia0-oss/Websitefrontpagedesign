@@ -62,18 +62,27 @@ export function AlertProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setAlertHistory(
-        (data || []).map((row: any) => ({
-          id: `history-${row.alert_type}-${row.id}`,
-          type: row.alert_type as AlertHistoryEntry["type"],
-          severity: row.severity as AlertHistoryEntry["severity"],
-          message: row.message,
-          startTime: new Date(row.start_time).getTime(),
-          endTime: row.end_time ? new Date(row.end_time).getTime() : undefined,
-          duration: row.duration_ms ?? undefined,
-        }))
-      );
+      const mapped = (data || []).map((row: any) => ({
+        id: `history-${row.alert_type}-${row.id}`,
+        type: row.alert_type as AlertHistoryEntry["type"],
+        severity: row.severity as AlertHistoryEntry["severity"],
+        message: row.message,
+        startTime: new Date(row.start_time).getTime(),
+        endTime: row.end_time ? new Date(row.end_time).getTime() : undefined,
+        duration: row.duration_ms ?? undefined,
+      }));
+
+      setAlertHistory(mapped);
       historyLoadedRef.current = true;
+
+      // Adopt any already-open alerts from Supabase into activeAlertsRef so
+      // the network interval doesn't create a duplicate in-memory entry on top
+      // of the existing Supabase-loaded one.
+      mapped.forEach((entry) => {
+        if (!entry.endTime && !activeAlertsRef.current.has(entry.type)) {
+          activeAlertsRef.current.set(entry.type, entry);
+        }
+      });
     })();
   }, []);
 
