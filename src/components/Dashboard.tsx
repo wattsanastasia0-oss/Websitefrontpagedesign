@@ -12,6 +12,7 @@ import { ThresholdPage } from "./ThresholdPage";
 import { ExportPage } from "./ExportPage";
 import { DosingHistoryPage } from "./DosingHistoryPage";
 import { AlertHistoryPage } from "./AlertHistoryPage";
+import { CorrelationPage } from "./CorrelationPage";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -36,6 +37,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  GitCompare,
 } from "lucide-react";
 import { UnitProvider, useUnits } from "./UnitContext";
 import { ThresholdProvider, useThresholds } from "./ThresholdContext";
@@ -274,6 +276,18 @@ function DashboardContent() {
           </div>
 
           <button
+            onClick={() => setActiveTab("correlation")}
+            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
+              activeTab === "correlation"
+                ? "bg-sidebar-accent text-white"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/20"
+            }`}
+          >
+            <GitCompare className="w-5 h-5 text-emerald-400" />
+            Correlation
+          </button>
+
+          <button
             onClick={() => setActiveTab("export")}
             className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
               activeTab === "export"
@@ -362,6 +376,7 @@ function DashboardContent() {
           {activeTab === "export" && <ExportPage />}
           {activeTab === "dosingHistory" && <DosingHistoryPage />}
           {activeTab === "alertHistory" && <AlertHistoryPage />}
+          {activeTab === "correlation" && <CorrelationPage />}
         </div>
       </main>
     </div>
