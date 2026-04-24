@@ -15,7 +15,7 @@ import domtoimage from "dom-to-image-more";
 import React from "react";
 import { downsample } from "../utils/downsample";
 
-type ParameterKey = "ec" | "pH" | "temp" | "o2" | "waterLevel" | "transpiration";
+type ParameterKey = "ec" | "pH" | "temp" | "waterLevel";
 
 interface CorrelationData {
   param1: ParameterKey;
@@ -29,18 +29,14 @@ const PARAMETER_LABELS: Record<ParameterKey, string> = {
   ec: "EC",
   pH: "pH",
   temp: "Temperature",
-  o2: "O2",
   waterLevel: "Water Level",
-  transpiration: "Transpiration",
 };
 
 const PARAMETER_UNITS: Record<ParameterKey, string> = {
   ec: "μS/cm",
   pH: "",
   temp: "°F",
-  o2: "mg/L",
   waterLevel: "inches",
-  transpiration: "rate",
 };
 
 export function CorrelationPage() {
@@ -173,12 +169,8 @@ export function CorrelationPage() {
           return r.ph;
         case "temp":
           return r.temperature;
-        case "o2":
-          return r.o2;
         case "waterLevel":
           return r.waterLevel;
-        case "transpiration":
-          return r.transpirationRate || 0;
         default:
           return 0;
       }
@@ -187,7 +179,7 @@ export function CorrelationPage() {
 
   // Calculate correlation matrix
   const correlationMatrix = useMemo(() => {
-    const params: ParameterKey[] = ["ec", "pH", "temp", "o2", "waterLevel", "transpiration"];
+    const params: ParameterKey[] = ["ec", "pH", "temp", "waterLevel"];
     const matrix: CorrelationData[] = [];
 
     for (let i = 0; i < params.length; i++) {
@@ -322,22 +314,10 @@ export function CorrelationPage() {
       });
     }
 
-    // Temperature vs Transpiration (should be positive)
-    const tempTranspCorr = correlationMatrix.find((c) => 
-      (c.param1 === "temp" && c.param2 === "transpiration") || 
-      (c.param1 === "transpiration" && c.param2 === "temp")
-    );
-    if (tempTranspCorr && tempTranspCorr.coefficient > 0.5) {
-      insights.push({
-        type: "positive",
-        message: `Temp/Transpiration correlation is strong (${tempTranspCorr.coefficient.toFixed(2)}). Plants responding well to temperature.`,
-      });
-    }
-
     return insights;
   }, [correlationMatrix]);
 
-  const params: ParameterKey[] = ["ec", "pH", "temp", "o2", "waterLevel", "transpiration"];
+  const params: ParameterKey[] = ["ec", "pH", "temp", "waterLevel"];
 
   // Export correlation data to CSV
   const exportCorrelationData = () => {
