@@ -44,6 +44,7 @@ import { ThresholdProvider, useThresholds } from "./ThresholdContext";
 import { AlertProvider, useAlerts } from "./AlertContext";
 import { DosingProvider, useDosing } from "./DosingContext";
 import { SensorDataProvider, useSharedSensorData } from "./SensorDataContext";
+import { MaintenanceProvider, useMaintenance } from "./MaintenanceContext";
 import { useTheme } from "./ThemeContext";
 import { useAuth } from "./AuthContext";
 
@@ -95,19 +96,26 @@ function DashboardContent() {
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
   const { logout } = useAuth();
-  const { alerts, checkAlerts } = useAlerts();
+  const { alerts, checkAlerts, clearAllAlerts } = useAlerts();
   const { checkDosingEvents } = useDosing();
   const { thresholds } = useThresholds();
   const { latestReading, lastUpdated: lastChanged } = useSharedSensorData();
   const { theme, toggleTheme } = useTheme();
+  const { isMaintenance, toggleMaintenance } = useMaintenance();
 
   useEffect(() => {
-    if (latestReading) {
-      // Thresholds and sensor readings are both stored in Celsius now
+    if (latestReading && !isMaintenance) {
       checkAlerts(latestReading, thresholds);
       checkDosingEvents(latestReading);
     }
-  }, [latestReading, thresholds, checkAlerts, checkDosingEvents]);
+  }, [latestReading, thresholds, checkAlerts, checkDosingEvents, isMaintenance]);
+
+  // Clear alerts when entering maintenance mode
+  useEffect(() => {
+    if (isMaintenance) {
+      clearAllAlerts();
+    }
+  }, [isMaintenance, clearAllAlerts]);
 
   const hasAlerts = alerts.length > 0;
   const alertMessages = alerts.map((a) => a.message).join("|");
@@ -339,6 +347,16 @@ function DashboardContent() {
         </header>
 
         <div className="p-4 space-y-2 bg-gradient-to-r from-white via-teal-50/50 to-cyan-50/50 dark:from-gray-950 dark:via-teal-950/50 dark:to-cyan-950/50 border-b border-teal-100 dark:border-teal-800">
+          {isMaintenance && (
+            <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 py-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertTitle className="text-amber-900 dark:text-amber-300 text-sm">Maintenance Mode Active</AlertTitle>
+              <AlertDescription className="text-amber-700 dark:text-amber-400 text-sm">
+                Data collection and alerts are paused.
+                <button onClick={toggleMaintenance} className="ml-2 underline font-medium">Disable</button>
+              </AlertDescription>
+            </Alert>
+          )}
           {hasAlerts &&
             alerts.map((alert, index) => (
               <Alert
@@ -387,13 +405,15 @@ export function Dashboard() {
   return (
     <UnitProvider>
       <ThresholdProvider>
-        <AlertProvider>
-          <DosingProvider>
-            <SensorDataProvider>
-              <DashboardContent />
-            </SensorDataProvider>
-          </DosingProvider>
-        </AlertProvider>
+        <MaintenanceProvider>
+          <AlertProvider>
+            <DosingProvider>
+              <SensorDataProvider>
+                <DashboardContent />
+              </SensorDataProvider>
+            </DosingProvider>
+          </AlertProvider>
+        </MaintenanceProvider>
       </ThresholdProvider>
     </UnitProvider>
   );

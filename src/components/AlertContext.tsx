@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode, useCallback, useRef } from "react";
 import type { SensorReading } from "../types/sensor-data";
 import { supabase } from "../lib/supabaseClient";
+import { useMaintenance } from "./MaintenanceContext";
 
 export interface Alert {
   id: string;
@@ -47,6 +48,9 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   const activeAlertsRef = useRef<Map<string, AlertHistoryEntry>>(new Map());
   const closedOrphanedNetworkRef = useRef(false);
   const historyLoadedRef = useRef(false);
+  const { isMaintenance } = useMaintenance();
+  const isMaintenanceRef = useRef(isMaintenance);
+  useEffect(() => { isMaintenanceRef.current = isMaintenance; }, [isMaintenance]);
 
   // Load alert history from Supabase
   useEffect(() => {
@@ -125,6 +129,9 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   // Check for network connectivity alert (no data for 10 minutes)
   useEffect(() => {
     const checkNetworkInterval = setInterval(() => {
+      // Skip all network alert logic during maintenance mode
+      if (isMaintenanceRef.current) return;
+
       const now = Date.now();
       const timeSinceLastData = now - lastDataTimestamp;
       const TEN_MINUTES = 10 * 60 * 1000;

@@ -1,5 +1,6 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useSensorData } from "../hooks/useSensorData";
+import { useMaintenance } from "./MaintenanceContext";
 import type { SensorReading } from "../types/sensor-data";
 
 interface SensorDataContextType {
@@ -14,7 +15,8 @@ interface SensorDataContextType {
 const SensorDataContext = createContext<SensorDataContextType | undefined>(undefined);
 
 export function SensorDataProvider({ children }: { children: ReactNode }) {
-  const data = useSensorData();
+  const { isMaintenance } = useMaintenance();
+  const data = useSensorData(isMaintenance);
   return (
     <SensorDataContext.Provider value={data}>
       {children}

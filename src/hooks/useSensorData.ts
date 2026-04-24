@@ -118,7 +118,7 @@ async function fetchReadingsFromSupabase(): Promise<SensorReading[]> {
   }
 }
 
-export function useSensorData(): UseSensorDataResult {
+export function useSensorData(paused = false): UseSensorDataResult {
   const [readings, setReadings] = useState<SensorReading[]>([]);
   const [latestReading, setLatestReading] = useState<SensorReading | null>(null);
   const latestReadingRef = useRef<SensorReading | null>(null);
@@ -127,6 +127,8 @@ export function useSensorData(): UseSensorDataResult {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const hasBackfilled = useRef(false);
   const hasInitialLoad = useRef(false);
+  const pausedRef = useRef(paused);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   const loadData = useCallback(async () => {
     try {
@@ -147,6 +149,12 @@ export function useSensorData(): UseSensorDataResult {
           latestReadingRef.current = latest;
           setLastUpdated(latest.timestamp);
         }
+      }
+
+      // Skip AWS polling when in maintenance mode — historical data stays visible
+      if (pausedRef.current) {
+        setIsLoading(false);
+        return;
       }
 
       // Fetch latest from AWS
@@ -305,6 +313,7 @@ export function useSensorData(): UseSensorDataResult {
     // When tab becomes visible again, fetch latest AND backfill any gap
     const handleVisibilityChange = async () => {
       if (document.visibilityState !== 'visible') return;
+      if (pausedRef.current) return;
 
       // Fetch latest reading immediately
       loadData();

@@ -2,11 +2,14 @@ import { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { Switch } from "./ui/switch";
+import { Label } from "./ui/label";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Wrench, Loader2, AlertCircle } from "lucide-react";
 import { useUnits } from "./UnitContext";
 import { useAlerts } from "./AlertContext";
 import { useSharedSensorData } from "./SensorDataContext";
+import { useMaintenance } from "./MaintenanceContext";
 import { downsample } from "../utils/downsample";
 
 const MAX_CHART_POINTS = 1500;
@@ -15,6 +18,7 @@ export function HomePage() {
   const { tempUnit, waterLevelUnit } = useUnits();
   const { } = useAlerts();
   const { readings, latestReading, isLoading, error } = useSharedSensorData();
+  const { isMaintenance, toggleMaintenance } = useMaintenance();
 
   // Convert data based on selected units — show last 24 hours
   const data = useMemo(() => {
@@ -252,6 +256,45 @@ export function HomePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Maintenance Mode */}
+      <Card className={`mt-6 border-2 ${
+        isMaintenance
+          ? "border-amber-400 bg-amber-50 dark:bg-amber-950/20"
+          : "border-border"
+      }`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Wrench className={`w-5 h-5 ${isMaintenance ? "text-amber-500" : "text-muted-foreground"}`} />
+              <div>
+                <CardTitle className={`text-base ${isMaintenance ? "text-amber-700 dark:text-amber-300" : ""`}>
+                  Maintenance Mode
+                </CardTitle>
+                <CardDescription className={isMaintenance ? "text-amber-600 dark:text-amber-400" : ""}>
+                  {isMaintenance
+                    ? "Data collection and alerts are paused"
+                    : "Pause data collection and alerts for system maintenance"}
+                </CardDescription>
+              </div>
+            </div>
+            <Switch
+              id="maintenance-toggle"
+              checked={isMaintenance}
+              onCheckedChange={toggleMaintenance}
+              className="data-[state=checked]:bg-amber-500"
+            />
+          </div>
+        </CardHeader>
+        {isMaintenance && (
+          <CardContent className="pt-0">
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              The system will not poll for new sensor readings, generate alerts, or log dosing events while maintenance mode is active.
+              Historical data remains visible. Turn off maintenance mode when servicing is complete.
+            </p>
+          </CardContent>
+        )}
+      </Card>
     </div>
   );
 }
