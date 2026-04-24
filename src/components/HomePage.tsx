@@ -268,7 +268,7 @@ export function HomePage() {
             <div className="flex items-center gap-3">
               <Wrench className={`w-5 h-5 ${isMaintenance ? "text-amber-500" : "text-muted-foreground"}`} />
               <div>
-                <CardTitle className={`text-base ${isMaintenance ? "text-amber-700 dark:text-amber-300" : ""`}>
+                <CardTitle className={`text-base ${isMaintenance ? "text-amber-700 dark:text-amber-300" : ""}`}>
                   Maintenance Mode
                 </CardTitle>
                 <CardDescription className={isMaintenance ? "text-amber-600 dark:text-amber-400" : ""}>
