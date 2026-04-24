@@ -62,7 +62,43 @@ export function AlertProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const mapped = (data || []).map((row: any) => ({
+      const rows = data || [];
+
+      // ── Deduplicate open rows per alert type in Supabase ──────────────
+      // Multiple open rows for the same type can accumulate from past sessions
+      // before the duplicate-prevention fix was in place. On every load, close
+      // all but the oldest open row for each type so they stop showing as
+      // separate "Ongoing" entries.
+      const openByType: Record<string, any[]> = {};
+      rows.forEach((row: any) => {
+        if (!row.end_time) {
+          if (!openByType[row.alert_type]) openByType[row.alert_type] = [];
+          openByType[row.alert_type].push(row);
+        }
+      });
+      const closeTime = new Date().toISOString();
+      for (const type of Object.keys(openByType)) {
+        const openRows = openByType[type];
+        if (openRows.length > 1) {
+          // Keep the oldest (lowest start_time), close the rest
+          openRows.sort((a: any, b: any) =>
+            new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+          );
+          const idsToClose = openRows.slice(1).map((r: any) => r.id);
+          supabase
+            .from("alert_history")
+            .update({ end_time: closeTime, duration_ms: 0 })
+            .in("id", idsToClose)
+            .then(({ error: e }) => {
+              if (e) console.error("Failed to close duplicate alerts:", e);
+            });
+          // Mark them closed locally too
+          openRows.slice(1).forEach((r: any) => { r.end_time = closeTime; r.duration_ms = 0; });
+        }
+      }
+      // ──────────────────────────────────────────────────────────────────
+
+      const mapped = rows.map((row: any) => ({
         id: `history-${row.alert_type}-${row.id}`,
         type: row.alert_type as AlertHistoryEntry["type"],
         severity: row.severity as AlertHistoryEntry["severity"],
@@ -413,8 +449,18 @@ export function AlertProvider({ children }: { children: ReactNode }) {
         activeEntries.push({ ...entry });
       }
     });
-    // Active alerts first (no endTime), then ended alerts
-    return [...activeEntries, ...alertHistory];
+
+    // Deduplicate open entries per type (show only the oldest open entry per type).
+    // Closed entries are always shown as-is.
+    const seenOpenTypes = new Set<string>();
+    const deduped = [...activeEntries, ...alertHistory].filter((e) => {
+      if (e.endTime) return true; // always show closed entries
+      if (seenOpenTypes.has(e.type)) return false; // skip duplicate open
+      seenOpenTypes.add(e.type);
+      return true;
+    });
+
+    return deduped;
   }, [alerts, alertHistory]); // re-derive when alerts or history change
 
   return (
