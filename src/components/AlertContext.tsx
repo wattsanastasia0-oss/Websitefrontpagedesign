@@ -386,8 +386,12 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     }
 
     // End alerts that are no longer active
+    // Skip "network" — it is managed exclusively by the interval, not by sensor readings.
+    // If sensor-reading logic closed it here it would use the sensor's old timestamp
+    // as endTime, producing negative durations and causing the interval to re-create it.
     const endedAlerts: AlertHistoryEntry[] = [];
     activeAlertsRef.current.forEach((entry, type) => {
+      if (type === "network") return;
       if (!currentAlertTypes.has(type)) {
         endedAlerts.push({
           ...entry,
