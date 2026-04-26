@@ -101,8 +101,6 @@ function DashboardContent() {
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
-  const [newProjectStart, setNewProjectStart] = useState("");
-  const [newProjectEnd, setNewProjectEnd] = useState("");
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null);
 
@@ -113,7 +111,7 @@ function DashboardContent() {
   const { latestReading, lastUpdated: lastChanged } = useSharedSensorData();
   const { theme, toggleTheme } = useTheme();
   const { isMaintenance, toggleMaintenance } = useMaintenance();
-  const { activeProject, isReadOnly, projects, setActiveProject, createProject, deleteProject } = useProject();
+  const { projects, liveProject, viewingProject, setViewingProject, createProject, deleteProject, isReadOnly } = useProject();
 
   useEffect(() => {
     if (latestReading && !isMaintenance && !isReadOnly) {
@@ -162,32 +160,33 @@ function DashboardContent() {
             <div className="flex items-center gap-2">
               <FolderOpen className="w-4 h-4 text-emerald-400 shrink-0" />
               <select
-                value={activeProject?.id ?? ""}
+                value={viewingProject?.id ?? ""}
                 onChange={(e) => {
                   const p = projects.find((proj) => proj.id === Number(e.target.value));
-                  setActiveProject(p ?? null);
+                  if (p) setViewingProject(p);
                 }}
                 className="flex-1 bg-sidebar text-sidebar-foreground text-sm border border-sidebar-border rounded px-2 py-1 min-w-0"
               >
-                <option value="">Live Data</option>
                 {projects.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.name}{p.is_active ? " (active)" : ""}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {isReadOnly && activeProject && (
+            {isReadOnly && viewingProject && (
               <div className="text-xs text-amber-400 bg-amber-500/10 rounded px-2 py-1 flex items-center justify-between">
                 <span>Viewing old project — read-only</span>
                 <button
                   onClick={async () => {
-                    if (activeProject && confirm(`Delete "${activeProject.name}"? This cannot be undone.`)) {
-                      setDeletingProjectId(activeProject.id);
-                      await deleteProject(activeProject.id);
+                    if (viewingProject && confirm(`Delete "${viewingProject.name}"? This cannot be undone.`)) {
+                      setDeletingProjectId(viewingProject.id);
+                      await deleteProject(viewingProject.id);
                       setDeletingProjectId(null);
                     }
                   }}
-                  disabled={deletingProjectId === activeProject.id}
+                  disabled={deletingProjectId === viewingProject.id}
                   className="ml-2 text-red-400 hover:text-red-300 p-0.5 rounded hover:bg-red-500/20"
                   title="Delete this project"
                 >
@@ -215,39 +214,26 @@ function DashboardContent() {
                   placeholder="Project name..."
                   className="w-full bg-sidebar text-sidebar-foreground text-sm border border-sidebar-border rounded px-2 py-1"
                   autoFocus
-                />
-                <input
-                  type="date"
-                  value={newProjectStart}
-                  onChange={(e) => setNewProjectStart(e.target.value)}
-                  className="w-full bg-sidebar text-sidebar-foreground text-sm border border-sidebar-border rounded px-2 py-1"
-                />
-                <input
-                  type="date"
-                  value={newProjectEnd}
-                  onChange={(e) => setNewProjectEnd(e.target.value)}
-                  className="w-full bg-sidebar text-sidebar-foreground text-sm border border-sidebar-border rounded px-2 py-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setShowNewProjectInput(false);
+                      setNewProjectName("");
+                    }
+                  }}
                 />
                 <div className="flex gap-1">
                   <Button
                     size="sm"
                     className="flex-1 text-xs"
-                    disabled={!newProjectName.trim() || !newProjectStart || !newProjectEnd || isSavingProject}
+                    disabled={!newProjectName.trim() || isSavingProject}
                     onClick={async () => {
                       setIsSavingProject(true);
-                      try {
-                        const start = new Date(newProjectStart);
-                        start.setHours(0, 0, 0, 0);
-                        const end = new Date(newProjectEnd);
-                        end.setHours(23, 59, 59, 999);
-                        await createProject(newProjectName.trim(), start, end);
+                      const ok = await createProject(newProjectName.trim());
+                      if (ok) {
                         setNewProjectName("");
-                        setNewProjectStart("");
-                        setNewProjectEnd("");
                         setShowNewProjectInput(false);
-                      } finally {
-                        setIsSavingProject(false);
                       }
+                      setIsSavingProject(false);
                     }}
                   >
                     Save
@@ -259,8 +245,6 @@ function DashboardContent() {
                     onClick={() => {
                       setShowNewProjectInput(false);
                       setNewProjectName("");
-                      setNewProjectStart("");
-                      setNewProjectEnd("");
                     }}
                   >
                     Cancel
@@ -472,15 +456,17 @@ function DashboardContent() {
         </header>
 
         <div className="p-4 space-y-2 bg-gradient-to-r from-white via-teal-50/50 to-cyan-50/50 dark:from-gray-950 dark:via-teal-950/50 dark:to-cyan-950/50 border-b border-teal-100 dark:border-teal-800">
-          {isReadOnly && activeProject && (
+          {isReadOnly && viewingProject && (
             <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 py-2">
               <FolderOpen className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               <AlertTitle className="text-amber-900 dark:text-amber-300 text-sm">
-                Viewing Project: {activeProject.name} · Read-only
+                Viewing Project: {viewingProject.name} · Read-only
               </AlertTitle>
               <AlertDescription className="text-amber-700 dark:text-amber-400 text-sm">
                 Historical data only. Controls and alerts are disabled.
-                <button onClick={() => setActiveProject(null)} className="ml-2 underline font-medium">Return to Live</button>
+                {liveProject && (
+                  <button onClick={() => setViewingProject(liveProject)} className="ml-2 underline font-medium">Return to Live</button>
+                )}
               </AlertDescription>
             </Alert>
           )}

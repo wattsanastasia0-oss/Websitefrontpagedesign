@@ -17,13 +17,14 @@ const SensorDataContext = createContext<SensorDataContextType | undefined>(undef
 
 export function SensorDataProvider({ children }: { children: ReactNode }) {
   const { isMaintenance } = useMaintenance();
-  const { activeProject } = useProject();
+  const { viewingProject, liveProject: _liveProject, isReadOnly } = useProject();
 
-  const dateRange = activeProject
-    ? { from: new Date(activeProject.started_at), to: new Date(activeProject.ended_at) }
+  // When viewing an old project, scope data to its date range
+  const dateRange = isReadOnly && viewingProject
+    ? { from: new Date(viewingProject.started_at), to: viewingProject.ended_at ? new Date(viewingProject.ended_at) : new Date() }
     : undefined;
 
-  const data = useSensorData(isMaintenance || activeProject !== null, dateRange);
+  const data = useSensorData(isMaintenance || isReadOnly, dateRange);
   return (
     <SensorDataContext.Provider value={data}>
       {children}
