@@ -126,6 +126,18 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // Reset lastDataTimestamp when the tab becomes visible again after being
+  // suspended (e.g. laptop lid closed) so timers don't fire stale comparisons.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setLastDataTimestamp(Date.now());
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   // Check for network connectivity alert (no data for 10 minutes)
   useEffect(() => {
     const checkNetworkInterval = setInterval(() => {
