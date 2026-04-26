@@ -40,6 +40,8 @@ import {
   AlertCircle,
   GitCompare,
   FolderOpen,
+  FolderPlus,
+  Trash2,
 } from "lucide-react";
 import { UnitProvider, useUnits } from "./UnitContext";
 import { ThresholdProvider, useThresholds } from "./ThresholdContext";
@@ -97,6 +99,12 @@ function DashboardContent() {
   const [isParametersExpanded, setIsParametersExpanded] = useState(true);
   const [isSystemSettingsExpanded, setIsSystemSettingsExpanded] = useState(false);
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
+  const [showNewProjectInput, setShowNewProjectInput] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectStart, setNewProjectStart] = useState("");
+  const [newProjectEnd, setNewProjectEnd] = useState("");
+  const [isSavingProject, setIsSavingProject] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<number | null>(null);
 
   const { logout } = useAuth();
   const { alerts, checkAlerts, clearAllAlerts } = useAlerts();
@@ -105,7 +113,7 @@ function DashboardContent() {
   const { latestReading, lastUpdated: lastChanged } = useSharedSensorData();
   const { theme, toggleTheme } = useTheme();
   const { isMaintenance, toggleMaintenance } = useMaintenance();
-  const { activeProject, isReadOnly, projects, setActiveProject } = useProject();
+  const { activeProject, isReadOnly, projects, setActiveProject, createProject, deleteProject } = useProject();
 
   useEffect(() => {
     if (latestReading && !isMaintenance && !isReadOnly) {
@@ -148,6 +156,119 @@ function DashboardContent() {
             <Home className="w-5 h-5 text-emerald-400" />
             Home Page
           </button>
+
+          {/* Project Selector */}
+          <div className="border border-sidebar-border rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-emerald-400 shrink-0" />
+              <select
+                value={activeProject?.id ?? ""}
+                onChange={(e) => {
+                  const p = projects.find((proj) => proj.id === Number(e.target.value));
+                  setActiveProject(p ?? null);
+                }}
+                className="flex-1 bg-sidebar text-sidebar-foreground text-sm border border-sidebar-border rounded px-2 py-1 min-w-0"
+              >
+                <option value="">Live Data</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {isReadOnly && activeProject && (
+              <div className="text-xs text-amber-400 bg-amber-500/10 rounded px-2 py-1 flex items-center justify-between">
+                <span>Viewing old project — read-only</span>
+                <button
+                  onClick={async () => {
+                    if (activeProject && confirm(`Delete "${activeProject.name}"? This cannot be undone.`)) {
+                      setDeletingProjectId(activeProject.id);
+                      await deleteProject(activeProject.id);
+                      setDeletingProjectId(null);
+                    }
+                  }}
+                  disabled={deletingProjectId === activeProject.id}
+                  className="ml-2 text-red-400 hover:text-red-300 p-0.5 rounded hover:bg-red-500/20"
+                  title="Delete this project"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
+            {!showNewProjectInput ? (
+              <Button
+                onClick={() => setShowNewProjectInput(true)}
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+              >
+                <FolderPlus className="w-3 h-3 mr-1" />
+                New Project
+              </Button>
+            ) : (
+              <div className="space-y-1">
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="Project name..."
+                  className="w-full bg-sidebar text-sidebar-foreground text-sm border border-sidebar-border rounded px-2 py-1"
+                  autoFocus
+                />
+                <input
+                  type="date"
+                  value={newProjectStart}
+                  onChange={(e) => setNewProjectStart(e.target.value)}
+                  className="w-full bg-sidebar text-sidebar-foreground text-sm border border-sidebar-border rounded px-2 py-1"
+                />
+                <input
+                  type="date"
+                  value={newProjectEnd}
+                  onChange={(e) => setNewProjectEnd(e.target.value)}
+                  className="w-full bg-sidebar text-sidebar-foreground text-sm border border-sidebar-border rounded px-2 py-1"
+                />
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    className="flex-1 text-xs"
+                    disabled={!newProjectName.trim() || !newProjectStart || !newProjectEnd || isSavingProject}
+                    onClick={async () => {
+                      setIsSavingProject(true);
+                      try {
+                        const start = new Date(newProjectStart);
+                        start.setHours(0, 0, 0, 0);
+                        const end = new Date(newProjectEnd);
+                        end.setHours(23, 59, 59, 999);
+                        await createProject(newProjectName.trim(), start, end);
+                        setNewProjectName("");
+                        setNewProjectStart("");
+                        setNewProjectEnd("");
+                        setShowNewProjectInput(false);
+                      } finally {
+                        setIsSavingProject(false);
+                      }
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={() => {
+                      setShowNewProjectInput(false);
+                      setNewProjectName("");
+                      setNewProjectStart("");
+                      setNewProjectEnd("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="space-y-1">
             <button
@@ -300,21 +421,6 @@ function DashboardContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("projects")}
-            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
-              activeTab === "projects"
-                ? "bg-sidebar-accent text-white"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/20"
-            }`}
-          >
-            <FolderOpen className="w-5 h-5 text-emerald-400" />
-            <span>Projects</span>
-            {projects.length > 0 && (
-              <Badge variant="secondary" className="ml-auto text-xs">{projects.length}</Badge>
-            )}
-          </button>
-
-          <button
             onClick={() => setActiveTab("export")}
             className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
               activeTab === "export"
@@ -426,7 +532,6 @@ function DashboardContent() {
           {activeTab === "dosingHistory" && <DosingHistoryPage />}
           {activeTab === "alertHistory" && <AlertHistoryPage />}
           {activeTab === "correlation" && <CorrelationPage />}
-          {activeTab === "projects" && <ProjectsPage />}
         </div>
       </main>
     </div>
