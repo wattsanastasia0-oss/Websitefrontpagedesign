@@ -131,6 +131,3 @@ export function useProject() {
   if (!ctx) throw new Error("useProject must be used within ProjectProvider");
   return ctx;
 }
-
-  return ctx;
-}
