@@ -7,6 +7,7 @@ import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Zap, Droplets, Thermometer, Waves, Wind, Leaf } from "lucide-react";
 import { useThresholds } from "./ThresholdContext";
 import { useUnits } from "./UnitContext";
+import { useProject } from "./ProjectContext";
 import { sendThresholdsAndSetpoints } from "../services/aws-data-service";
 import { toast } from "sonner";
 
@@ -51,6 +52,7 @@ export function ThresholdPage() {
   } = useThresholds();
 
   const { tempUnit, setTempUnit, waterLevelUnit, setWaterLevelUnit } = useUnits();
+  const { isReadOnly } = useProject();
 
   const [localThresholds, setLocalThresholds] = useState<LocalThresholdValues>({
     ec: { lower: "1000", upper: "1800" },
@@ -522,10 +524,15 @@ export function ThresholdPage() {
       </div>
 
       <div className="flex gap-4 pt-6">
-        <Button onClick={handleSaveAll} size="lg" className="flex-1" disabled={loading || hasErrors}>
+        {isReadOnly && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 self-center flex-1">
+            Controls are disabled in read-only project view.
+          </p>
+        )}
+        <Button onClick={handleSaveAll} size="lg" className="flex-1" disabled={loading || hasErrors || isReadOnly}>
           Save All Settings
         </Button>
-        <Button onClick={handleReset} variant="outline" size="lg" disabled={loading}>
+        <Button onClick={handleReset} variant="outline" size="lg" disabled={loading || isReadOnly}>
           Reset to Defaults
         </Button>
       </div>

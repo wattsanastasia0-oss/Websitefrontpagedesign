@@ -62,24 +62,28 @@ async function saveReadingToSupabase(reading: SensorReading) {
  * Load last 180 days of readings from Supabase
  * Paginates in chunks of 1000 (Supabase default row limit)
  */
-async function fetchReadingsFromSupabase(): Promise<SensorReading[]> {
+async function fetchReadingsFromSupabase(fromDate?: Date, toDate?: Date): Promise<SensorReading[]> {
   try {
-    const cutoff = new Date(
-      Date.now() - 180 * 24 * 60 * 60 * 1000
-    ).toISOString();
+    const cutoff = fromDate
+      ? fromDate.toISOString()
+      : new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
 
     const PAGE_SIZE = 1000;
     const allRows: any[] = [];
-    let from = 0;
+    let offset = 0;
 
-    while (from < MAX_READINGS) {
-      const to = from + PAGE_SIZE - 1; // .range() is inclusive
+    while (offset < MAX_READINGS) {
+      const rangeEnd = offset + PAGE_SIZE - 1; // .range() is inclusive
       let query = supabase
         .from("measurements")
         .select("*")
         .gte("recorded_at", cutoff)
         .order("recorded_at", { ascending: true })
-        .range(from, to);
+        .range(offset, rangeEnd);
+
+      if (toDate) {
+        query = query.lte("recorded_at", toDate.toISOString());
+      }
 
       const { data, error } = await query;
 
@@ -91,7 +95,7 @@ async function fetchReadingsFromSupabase(): Promise<SensorReading[]> {
       if (!data || data.length === 0) break;
 
       allRows.push(...data);
-      from += data.length;
+      offset += data.length;
 
       // If we got fewer than PAGE_SIZE, we've reached the end
       if (data.length < PAGE_SIZE) break;
@@ -118,7 +122,7 @@ async function fetchReadingsFromSupabase(): Promise<SensorReading[]> {
   }
 }
 
-export function useSensorData(paused = false): UseSensorDataResult {
+export function useSensorData(paused = false, dateRange?: { from: Date; to: Date }): UseSensorDataResult {
   const [readings, setReadings] = useState<SensorReading[]>([]);
   const [latestReading, setLatestReading] = useState<SensorReading | null>(null);
   const latestReadingRef = useRef<SensorReading | null>(null);
@@ -137,6 +141,23 @@ export function useSensorData(paused = false): UseSensorDataResult {
         setIsLoading(true);
       }
       setError(null);
+
+      // If a project date range is provided, fetch only that range and stop (read-only)
+      if (dateRange) {
+        if (!hasInitialLoad.current) {
+          hasInitialLoad.current = true;
+          const projectReadings = await fetchReadingsFromSupabase(dateRange.from, dateRange.to);
+          setReadings(projectReadings);
+          if (projectReadings.length > 0) {
+            const latest = projectReadings[projectReadings.length - 1];
+            setLatestReading(latest);
+            latestReadingRef.current = latest;
+            setLastUpdated(latest.timestamp);
+          }
+        }
+        setIsLoading(false);
+        return;
+      }
 
       // On first load, fetch full history from Supabase
       if (!hasInitialLoad.current) {
@@ -209,7 +230,7 @@ export function useSensorData(paused = false): UseSensorDataResult {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dateRange]);
 
   useEffect(() => {
     loadData();

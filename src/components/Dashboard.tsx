@@ -13,6 +13,7 @@ import { ExportPage } from "./ExportPage";
 import { DosingHistoryPage } from "./DosingHistoryPage";
 import { AlertHistoryPage } from "./AlertHistoryPage";
 import { CorrelationPage } from "./CorrelationPage";
+import { ProjectsPage } from "./ProjectsPage";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -38,6 +39,7 @@ import {
   ChevronUp,
   AlertCircle,
   GitCompare,
+  FolderOpen,
 } from "lucide-react";
 import { UnitProvider, useUnits } from "./UnitContext";
 import { ThresholdProvider, useThresholds } from "./ThresholdContext";
@@ -45,6 +47,7 @@ import { AlertProvider, useAlerts } from "./AlertContext";
 import { DosingProvider, useDosing } from "./DosingContext";
 import { SensorDataProvider, useSharedSensorData } from "./SensorDataContext";
 import { MaintenanceProvider, useMaintenance } from "./MaintenanceContext";
+import { ProjectProvider, useProject } from "./ProjectContext";
 import { useTheme } from "./ThemeContext";
 import { useAuth } from "./AuthContext";
 
@@ -102,20 +105,21 @@ function DashboardContent() {
   const { latestReading, lastUpdated: lastChanged } = useSharedSensorData();
   const { theme, toggleTheme } = useTheme();
   const { isMaintenance, toggleMaintenance } = useMaintenance();
+  const { activeProject, isReadOnly, projects, setActiveProject } = useProject();
 
   useEffect(() => {
-    if (latestReading && !isMaintenance) {
+    if (latestReading && !isMaintenance && !isReadOnly) {
       checkAlerts(latestReading, thresholds);
       checkDosingEvents(latestReading);
     }
-  }, [latestReading, thresholds, checkAlerts, checkDosingEvents, isMaintenance]);
+  }, [latestReading, thresholds, checkAlerts, checkDosingEvents, isMaintenance, isReadOnly]);
 
-  // Clear alerts when entering maintenance mode
+  // Clear alerts when entering maintenance mode or read-only project view
   useEffect(() => {
-    if (isMaintenance) {
+    if (isMaintenance || isReadOnly) {
       clearAllAlerts();
     }
-  }, [isMaintenance, clearAllAlerts]);
+  }, [isMaintenance, isReadOnly, clearAllAlerts]);
 
   const hasAlerts = alerts.length > 0;
   const alertMessages = alerts.map((a) => a.message).join("|");
@@ -296,6 +300,21 @@ function DashboardContent() {
           </button>
 
           <button
+            onClick={() => setActiveTab("projects")}
+            className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
+              activeTab === "projects"
+                ? "bg-sidebar-accent text-white"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/20"
+            }`}
+          >
+            <FolderOpen className="w-5 h-5 text-emerald-400" />
+            <span>Projects</span>
+            {projects.length > 0 && (
+              <Badge variant="secondary" className="ml-auto text-xs">{projects.length}</Badge>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab("export")}
             className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
               activeTab === "export"
@@ -347,6 +366,18 @@ function DashboardContent() {
         </header>
 
         <div className="p-4 space-y-2 bg-gradient-to-r from-white via-teal-50/50 to-cyan-50/50 dark:from-gray-950 dark:via-teal-950/50 dark:to-cyan-950/50 border-b border-teal-100 dark:border-teal-800">
+          {isReadOnly && activeProject && (
+            <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 py-2">
+              <FolderOpen className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertTitle className="text-amber-900 dark:text-amber-300 text-sm">
+                Viewing Project: {activeProject.name} · Read-only
+              </AlertTitle>
+              <AlertDescription className="text-amber-700 dark:text-amber-400 text-sm">
+                Historical data only. Controls and alerts are disabled.
+                <button onClick={() => setActiveProject(null)} className="ml-2 underline font-medium">Return to Live</button>
+              </AlertDescription>
+            </Alert>
+          )}
           {isMaintenance && (
             <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 py-2">
               <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -395,6 +426,7 @@ function DashboardContent() {
           {activeTab === "dosingHistory" && <DosingHistoryPage />}
           {activeTab === "alertHistory" && <AlertHistoryPage />}
           {activeTab === "correlation" && <CorrelationPage />}
+          {activeTab === "projects" && <ProjectsPage />}
         </div>
       </main>
     </div>
@@ -406,13 +438,15 @@ export function Dashboard() {
     <UnitProvider>
       <ThresholdProvider>
         <MaintenanceProvider>
-          <AlertProvider>
-            <DosingProvider>
-              <SensorDataProvider>
-                <DashboardContent />
-              </SensorDataProvider>
-            </DosingProvider>
-          </AlertProvider>
+          <ProjectProvider>
+            <AlertProvider>
+              <DosingProvider>
+                <SensorDataProvider>
+                  <DashboardContent />
+                </SensorDataProvider>
+              </DosingProvider>
+            </AlertProvider>
+          </ProjectProvider>
         </MaintenanceProvider>
       </ThresholdProvider>
     </UnitProvider>

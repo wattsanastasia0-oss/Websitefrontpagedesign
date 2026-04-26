@@ -1,6 +1,7 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useSensorData } from "../hooks/useSensorData";
 import { useMaintenance } from "./MaintenanceContext";
+import { useProject } from "./ProjectContext";
 import type { SensorReading } from "../types/sensor-data";
 
 interface SensorDataContextType {
@@ -16,7 +17,13 @@ const SensorDataContext = createContext<SensorDataContextType | undefined>(undef
 
 export function SensorDataProvider({ children }: { children: ReactNode }) {
   const { isMaintenance } = useMaintenance();
-  const data = useSensorData(isMaintenance);
+  const { activeProject } = useProject();
+
+  const dateRange = activeProject
+    ? { from: new Date(activeProject.started_at), to: new Date(activeProject.ended_at) }
+    : undefined;
+
+  const data = useSensorData(isMaintenance || activeProject !== null, dateRange);
   return (
     <SensorDataContext.Provider value={data}>
       {children}
