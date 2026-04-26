@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CalendarIcon, Download, Loader2, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useDosing } from "./DosingContext";
 import { useAlerts } from "./AlertContext";
+import { useProject } from "./ProjectContext";
 import { supabase } from "../lib/supabaseClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -18,7 +19,8 @@ type TimeRangeOption = "1h" | "3h" | "6h" | "12h" | "24h" | "3d" | "7d" | "14d" 
 export function ExportPage() {
   const { dosingHistory } = useDosing();
   const { alertHistory } = useAlerts();
-  
+  const { viewingProject, isReadOnly } = useProject();
+
   const [selectedParameters, setSelectedParameters] = useState({
     ec: false,
     ph: false,
@@ -62,6 +64,25 @@ export function ExportPage() {
 
   const [dosingTimeRange, setDosingTimeRange] = useState<TimeRangeOption>("all");
   const [alertTimeRange, setAlertTimeRange] = useState<TimeRangeOption>("all");
+
+  // Pre-fill date ranges when viewing a read-only project
+  useEffect(() => {
+    if (isReadOnly && viewingProject) {
+      const from = new Date(viewingProject.started_at);
+      const to = viewingProject.ended_at ? new Date(viewingProject.ended_at) : new Date();
+      setDateRange({ from, to });
+      setDosingDateRange({ from, to });
+      setAlertDateRange({ from, to });
+      setDosingTimeRange("custom");
+      setAlertTimeRange("custom");
+    } else {
+      setDateRange({ from: undefined, to: undefined });
+      setDosingDateRange({ from: undefined, to: undefined });
+      setAlertDateRange({ from: undefined, to: undefined });
+      setDosingTimeRange("all");
+      setAlertTimeRange("all");
+    }
+  }, [isReadOnly, viewingProject]);
 
   // Derive units from checkbox states
   const tempUnit = unitSettings.celsius ? "C" : "F";
