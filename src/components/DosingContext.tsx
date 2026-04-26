@@ -101,7 +101,8 @@ export function DosingProvider({ children }: { children: ReactNode }) {
           existingKeys.add(key);
 
           derivedEvents.push({ id: `${type.toLowerCase()}-derived-${ts}`, timestamp: ts, type, action, value });
-          upsertRows.push({ event_type: type, action, sensor_value: value, occurred_at: curr.recorded_at });
+          const minuteTs = new Date(Math.floor(ts / 60000) * 60000).toISOString();
+          upsertRows.push({ event_type: type, action, sensor_value: value, occurred_at: minuteTs });
         }
       }
 
@@ -113,9 +114,16 @@ export function DosingProvider({ children }: { children: ReactNode }) {
         if (upsertError) console.error("Failed to backfill dosing events:", upsertError);
       }
 
-      // 4. Merge and sort all events newest-first
+      // 4. Merge, deduplicate (by type+action+minute-bucket), and sort newest-first
+      const seenKeys = new Set<string>();
       const merged = [...existingEvents, ...derivedEvents]
         .sort((a, b) => b.timestamp - a.timestamp)
+        .filter((e) => {
+          const key = `${e.type}-${e.action}-${Math.floor(e.timestamp / 60000)}`;
+          if (seenKeys.has(key)) return false;
+          seenKeys.add(key);
+          return true;
+        })
         .slice(0, 10000);
 
       setDosingHistory(merged);
@@ -204,7 +212,7 @@ export function DosingProvider({ children }: { children: ReactNode }) {
                 event_type: event.type,
                 action: event.action,
                 sensor_value: event.value ?? null,
-                occurred_at: new Date(event.timestamp).toISOString(),
+                occurred_at: new Date(Math.floor(event.timestamp / 60000) * 60000).toISOString(),
               },
             ],
             { onConflict: "event_type,action,occurred_at", ignoreDuplicates: true }
