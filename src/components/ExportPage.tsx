@@ -785,7 +785,7 @@ export function ExportPage() {
             <div>
               <span className="text-slate-600">Units: </span>
               <span>
-                Temperature: °{tempUnit}, Water Level: {waterLevelUnit}
+                Temperature: °{tempUnit}
               </span>
             </div>
           </div>
