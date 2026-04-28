@@ -25,7 +25,7 @@ export function ExportPage() {
     ec: false,
     ph: false,
     temperature: false,
-    waterLevel: false,
+    o2: false,
     waterFlow: false,
   });
 
@@ -40,8 +40,6 @@ export function ExportPage() {
   const [unitSettings, setUnitSettings] = useState({
     fahrenheit: true,
     celsius: false,
-    centimeters: true,
-    inches: false,
   });
 
   const [isExporting, setIsExporting] = useState(false);
@@ -86,7 +84,6 @@ export function ExportPage() {
 
   // Derive units from checkbox states
   const tempUnit = unitSettings.celsius ? "C" : "F";
-  const waterLevelUnit = unitSettings.inches ? "in" : "cm";
 
   const handleUnitChange = (unit: string, checked: boolean) => {
     if (unit === "fahrenheit" || unit === "celsius") {
@@ -95,13 +92,6 @@ export function ExportPage() {
         ...prev,
         fahrenheit: unit === "fahrenheit" ? checked : !checked,
         celsius: unit === "celsius" ? checked : !checked,
-      }));
-    } else if (unit === "centimeters" || unit === "inches") {
-      // Water level units are mutually exclusive
-      setUnitSettings((prev) => ({
-        ...prev,
-        centimeters: unit === "centimeters" ? checked : !checked,
-        inches: unit === "inches" ? checked : !checked,
       }));
     }
   };
@@ -335,11 +325,8 @@ export function ExportPage() {
             : reading.temperature;
           row[`Temperature (°${tempUnit})`] = tempValue.toFixed(2);
         }
-        if (selectedParameters.waterLevel) {
-          const levelValue = waterLevelUnit === "cm" 
-            ? reading.waterLevel 
-            : reading.waterLevel / 2.54;
-          row[`Water Level (${waterLevelUnit})`] = levelValue.toFixed(2);
+        if (selectedParameters.o2) {
+          row["Dissolved O2 (%)"] = reading.o2.toFixed(1);
         }
 
         if (selectedParameters.waterFlow) {
@@ -391,7 +378,7 @@ export function ExportPage() {
       ec: true,
       ph: true,
       temperature: true,
-      waterLevel: true,
+      o2: true,
       waterFlow: true,
     });
     
@@ -452,9 +439,6 @@ export function ExportPage() {
         const tempValue = tempUnit === "F" 
           ? (reading.temperature * 9/5) + 32 
           : reading.temperature;
-        const levelValue = waterLevelUnit === "cm" 
-          ? reading.waterLevel 
-          : reading.waterLevel / 2.54;
 
         return {
           Date: format(new Date(reading.timestamp), "yyyy-MM-dd"),
@@ -462,7 +446,7 @@ export function ExportPage() {
           "EC (µS/cm)": reading.ec.toFixed(0),
           "pH": reading.ph.toFixed(2),
           [`Temperature (°${tempUnit})`]: tempValue.toFixed(2),
-          [`Water Level (${waterLevelUnit})`]: levelValue.toFixed(2),
+          "Dissolved O2 (%)": reading.o2.toFixed(1),
           "Water Flow": reading.waterFlowOk === 1 ? "On" : reading.waterFlowOk === 0 ? "Off" : "N/A",
         };
       });
@@ -608,14 +592,14 @@ export function ExportPage() {
 
             <div className="flex items-center space-x-2">
               <Checkbox
-                id="waterLevel"
-                checked={selectedParameters.waterLevel}
+                id="o2"
+                checked={selectedParameters.o2}
                 onCheckedChange={(checked) =>
-                  handleParameterChange("waterLevel", checked as boolean)
+                  handleParameterChange("o2", checked as boolean)
                 }
               />
-              <Label htmlFor="waterLevel" className="cursor-pointer">
-                Water Level
+              <Label htmlFor="o2" className="cursor-pointer">
+                Dissolved O₂ (%)
               </Label>
             </div>
 
@@ -759,37 +743,6 @@ export function ExportPage() {
                 </div>
               </div>
             </div>
-
-            <div>
-              <Label className="mb-2 block">Water Level Settings</Label>
-              <div className="space-y-3 ml-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="centimeters"
-                    checked={unitSettings.centimeters}
-                    onCheckedChange={(checked) =>
-                      handleUnitChange("centimeters", checked as boolean)
-                    }
-                  />
-                  <Label htmlFor="centimeters" className="cursor-pointer">
-                    Centimeters (cm)
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="inches"
-                    checked={unitSettings.inches}
-                    onCheckedChange={(checked) =>
-                      handleUnitChange("inches", checked as boolean)
-                    }
-                  />
-                  <Label htmlFor="inches" className="cursor-pointer">
-                    Inches (in)
-                  </Label>
-                </div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -814,7 +767,7 @@ export function ExportPage() {
                       ec: "EC",
                       ph: "pH",
                       temperature: "Temperature",
-                      waterLevel: "Water Level",
+                      o2: "Dissolved O₂",
                     };
                     return paramNames[param];
                   })

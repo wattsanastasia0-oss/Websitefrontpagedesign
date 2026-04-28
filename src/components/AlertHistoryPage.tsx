@@ -89,8 +89,8 @@ export function AlertHistoryPage() {
     switch (type) {
       case "temperature":
         return "Temperature";
-      case "waterLevel":
-        return "Water Level";
+      case "o2":
+        return "Dissolved O₂";
       case "ec":
         return "EC";
       case "ph":

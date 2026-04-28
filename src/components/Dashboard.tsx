@@ -4,7 +4,6 @@ import { ECPage } from "./ECPage";
 import { PHPage } from "./PHPage";
 import { TemperaturePage } from "./TemperaturePage";
 import { O2Page } from "./O2Page";
-import { WaterLevelPage } from "./WaterLevelPage";
 import { WaterFlowPage } from "./WaterFlowPage";
 import { TranspirationRatePage } from "./TranspirationRatePage";
 import { UserManualPage } from "./UserManualPage";
@@ -309,15 +308,15 @@ function DashboardContent() {
                 </button>
 
                 <button
-                  onClick={() => setActiveTab("water")}
+                  onClick={() => setActiveTab("o2")}
                   className={`w-full text-left px-3 py-2 rounded-lg flex items-center gap-3 transition-colors text-sm ${
-                    activeTab === "water"
+                    activeTab === "o2"
                       ? "bg-sidebar-accent text-white"
                       : "text-sidebar-foreground hover:bg-sidebar-accent/20"
                   }`}
                 >
-                  <Waves className="w-4 h-4 text-emerald-400" />
-                  Water Level
+                  <Wind className="w-4 h-4 text-emerald-400" />
+                  Dissolved O₂
                 </button>
 
                 <button
@@ -510,7 +509,7 @@ function DashboardContent() {
           {activeTab === "ec" && <ECPage />}
           {activeTab === "ph" && <PHPage />}
           {activeTab === "temp" && <TemperaturePage />}
-          {activeTab === "water" && <WaterLevelPage />}
+          {activeTab === "o2" && <O2Page />}
           {activeTab === "waterFlow" && <WaterFlowPage />}
           {activeTab === "thresholds" && <ThresholdPage />}
           {activeTab === "manual" && <div className="max-w-7xl mx-auto"><p>Page removed.</p></div>}

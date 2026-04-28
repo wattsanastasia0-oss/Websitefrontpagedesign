@@ -5,7 +5,7 @@ import { useMaintenance } from "./MaintenanceContext";
 
 export interface Alert {
   id: string;
-  type: "temperature" | "waterLevel" | "ec" | "ph" | "network" | "waterFlow";
+  type: "temperature" | "o2" | "ec" | "ph" | "network" | "waterFlow";
   severity: "critical" | "warning";
   message: string;
   timestamp: number;
@@ -13,7 +13,7 @@ export interface Alert {
 
 export interface AlertHistoryEntry {
   id: string;
-  type: "temperature" | "waterLevel" | "ec" | "ph" | "network" | "waterFlow";
+  type: "temperature" | "o2" | "ec" | "ph" | "network" | "waterFlow";
   severity: "critical" | "warning";
   message: string;
   startTime: number;
@@ -43,7 +43,6 @@ const AlertContext = createContext<AlertContextType | undefined>(undefined);
 export function AlertProvider({ children }: { children: ReactNode }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alertHistory, setAlertHistory] = useState<AlertHistoryEntry[]>([]);
-  const [lastDataTimestamp, setLastDataTimestamp] = useState<number>(Date.now());
   const lastCheckedReadingRef = useRef<number>(0);
   const activeAlertsRef = useRef<Map<string, AlertHistoryEntry>>(new Map());
   const closedOrphanedNetworkRef = useRef(false);
@@ -126,27 +125,29 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  // Reset lastDataTimestamp when the tab becomes visible again after being
-  // suspended (e.g. laptop lid closed) so timers don't fire stale comparisons.
+  // Check for network connectivity alert (no data in Supabase for 10 minutes)
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        setLastDataTimestamp(Date.now());
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
-
-  // Check for network connectivity alert (no data for 10 minutes)
-  useEffect(() => {
-    const checkNetworkInterval = setInterval(() => {
+    const checkNetworkInterval = setInterval(async () => {
       // Skip all network alert logic during maintenance mode
       if (isMaintenanceRef.current) return;
 
       const now = Date.now();
-      const timeSinceLastData = now - lastDataTimestamp;
       const TEN_MINUTES = 10 * 60 * 1000;
+
+      // Query Supabase directly for the most recent measurement
+      const { data, error } = await supabase
+        .from("measurements")
+        .select("recorded_at")
+        .order("recorded_at", { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error("Failed to check latest measurement timestamp:", error);
+        return;
+      }
+
+      const latestRecordedAt = data && data.length > 0 ? new Date(data[0].recorded_at).getTime() : 0;
+      const timeSinceLastData = now - latestRecordedAt;
 
       if (timeSinceLastData > TEN_MINUTES) {
         // Add network alert if not already present
@@ -264,7 +265,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     }, 30000); // Check every 30 seconds
 
     return () => clearInterval(checkNetworkInterval);
-  }, [lastDataTimestamp]);
+  }, []);
 
   const checkAlerts = useCallback((reading: SensorReading, thresholds: ThresholdValues) => {
     // Only update last data timestamp if this is a genuinely newer reading
@@ -272,7 +273,6 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     // Supabase data on page open doesn't reset the 10-minute countdown
     if (reading.timestamp > lastCheckedReadingRef.current) {
       lastCheckedReadingRef.current = reading.timestamp;
-      setLastDataTimestamp(reading.timestamp);
     }
 
     const newAlerts: Alert[] = [];
@@ -305,16 +305,16 @@ export function AlertProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Check Water Level
-    if (reading.waterLevel < thresholds.waterLevel.lower || reading.waterLevel > thresholds.waterLevel.upper) {
-      const alertType = "waterLevel";
-      const direction = reading.waterLevel < thresholds.waterLevel.lower ? "Too Low" : "Too High";
+    // Check O2
+    if (reading.o2 < thresholds.o2.lower || reading.o2 > thresholds.o2.upper) {
+      const alertType = "o2";
+      const direction = reading.o2 < thresholds.o2.lower ? "Too Low" : "Too High";
       currentAlertTypes.add(alertType);
       newAlerts.push({
-        id: "waterLevel-" + now,
+        id: "o2-" + now,
         type: alertType,
         severity: "critical",
-        message: `Water Level ${direction}`,
+        message: `Dissolved O₂ ${direction}`,
         timestamp: now,
       });
 
@@ -323,7 +323,7 @@ export function AlertProvider({ children }: { children: ReactNode }) {
           id: `history-${alertType}-${now}`,
           type: alertType,
           severity: "critical",
-          message: `Water Level ${direction}`,
+          message: `Dissolved O₂ ${direction}`,
           startTime: now,
         };
         activeAlertsRef.current.set(alertType, historyEntry);

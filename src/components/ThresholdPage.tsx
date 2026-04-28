@@ -469,54 +469,36 @@ export function ThresholdPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Waves className="w-5 h-5 text-primary" />
-                Water Level
+                <Wind className="w-5 h-5 text-primary" />
+                Dissolved O₂
               </CardTitle>
-              <CardDescription>Reservoir Level</CardDescription>
+              <CardDescription>Dissolved Oxygen (%)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Unit:</span>
-                <ToggleGroup
-                  type="single"
-                  value={waterLevelUnit}
-                  onValueChange={(value) =>
-                    value && setWaterLevelUnit(value as "cm" | "in")
-                  }
-                  size="sm"
-                >
-                  <ToggleGroupItem value="cm" aria-label="Centimeters">
-                    cm
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="in" aria-label="Inches">
-                    in
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
               <div className="space-y-2">
-                <Label htmlFor="water-lower">Lower Threshold ({waterLevelUnit})</Label>
+                <Label htmlFor="o2-lower">Lower Threshold (%)</Label>
                 <Input
-                  id="water-lower"
+                  id="o2-lower"
                   type="number"
                   step="0.1"
-                  value={localThresholds.waterLevel.lower}
-                  onChange={(e) => handleInputChange("waterLevel", "lower", e.target.value)}
-                  placeholder={waterLevelUnit === "cm" ? "e.g., 70" : "e.g., 27.6"}
+                  value={localThresholds.o2.lower}
+                  onChange={(e) => handleInputChange("o2", "lower", e.target.value)}
+                  placeholder="e.g., 6"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="water-upper">Upper Threshold ({waterLevelUnit})</Label>
+                <Label htmlFor="o2-upper">Upper Threshold (%)</Label>
                 <Input
-                  id="water-upper"
+                  id="o2-upper"
                   type="number"
                   step="0.1"
-                  value={localThresholds.waterLevel.upper}
-                  onChange={(e) => handleInputChange("waterLevel", "upper", e.target.value)}
-                  placeholder={waterLevelUnit === "cm" ? "e.g., 95" : "e.g., 37.4"}
+                  value={localThresholds.o2.upper}
+                  onChange={(e) => handleInputChange("o2", "upper", e.target.value)}
+                  placeholder="e.g., 12"
                 />
               </div>
-              {validationErrors.waterLevel && (
-                <p className="text-sm text-destructive">{validationErrors.waterLevel}</p>
+              {validationErrors.o2 && (
+                <p className="text-sm text-destructive">{validationErrors.o2}</p>
               )}
             </CardContent>
           </Card>
