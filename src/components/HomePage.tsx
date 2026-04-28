@@ -15,7 +15,7 @@ import { downsample } from "../utils/downsample";
 const MAX_CHART_POINTS = 1500;
 
 export function HomePage() {
-  const { tempUnit, waterLevelUnit } = useUnits();
+  const { tempUnit } = useUnits();
   const { } = useAlerts();
   const { readings, latestReading, isLoading, error } = useSharedSensorData();
   const { isMaintenance, toggleMaintenance } = useMaintenance();
@@ -34,10 +34,9 @@ export function HomePage() {
       ph: d.ph,
       temp: tempUnit === "C" ? d.temperature : (d.temperature * 9 / 5) + 32,
       o2: d.o2,
-      waterLevel: waterLevelUnit === "cm" ? d.waterLevel : d.waterLevel / 2.54,
       transpirationRate: d.transpirationRate || 0,
     }));
-  }, [readings, tempUnit, waterLevelUnit]);
+  }, [readings, tempUnit]);
 
   // Loading state
   if (isLoading && readings.length === 0) {
@@ -212,10 +211,10 @@ export function HomePage() {
           </CardContent>
         </Card>
 
-        {/* Water Level Graph */}
+        {/* O2 Graph */}
         <Card>
           <CardHeader>
-            <CardTitle>Water Level</CardTitle>
+            <CardTitle>Dissolved O₂</CardTitle>
             <CardDescription>Last 24 hours</CardDescription>
           </CardHeader>
           <CardContent>
@@ -241,12 +240,12 @@ export function HomePage() {
                     borderRadius: '8px',
                     color: 'hsl(var(--foreground))'
                   }}
-                  formatter={(value: number) => [value.toFixed(1) + ` ${waterLevelUnit}`, 'Water Level']}
+                  formatter={(value: number) => [value.toFixed(1) + ' %', 'Dissolved O₂']}
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="waterLevel" 
-                  stroke="#16a34a" 
+                  dataKey="o2" 
+                  stroke="#22c55e" 
                   strokeWidth={2}
                   dot={false}
                   isAnimationActive={false}
