@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Badge } from "./ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { useSharedSensorData } from "./SensorDataContext";
+import { useThresholds } from "./ThresholdContext";
 import { useState, useMemo } from "react";
 import { StatisticsCard } from "./StatisticsCard";
 import { downsample } from "../utils/downsample";
@@ -11,6 +12,7 @@ const MAX_CHART_POINTS = 1500;
 
 export function O2Page() {
   const { readings, latestReading, isLoading } = useSharedSensorData();
+  const { thresholds } = useThresholds();
   const [timeRange, setTimeRangeState] = useState<"24h" | "7d" | "1m">(() => {
     const saved = localStorage.getItem("hydro-chart-range");
     return saved === "24h" || saved === "7d" || saved === "1m" ? saved : "24h";
@@ -79,14 +81,14 @@ export function O2Page() {
   }, [filteredReadings]);
   
   const currentO2 = latestReading?.o2 ?? null;
-  
-  // Determine status based on typical range
+
+  // Determine status based on configured thresholds
   const getStatus = (value: number) => {
-    if (value < 5.0) return { label: "Critical", variant: "destructive" as const };
-    if (value < 6.0 || value > 12.0) return { label: "Caution", variant: "secondary" as const };
+    if (value < thresholds.o2.lower || value > thresholds.o2.upper)
+      return { label: "Out of Range", variant: "destructive" as const };
     return { label: "Normal", variant: "default" as const };
   };
-  
+
   const status = currentO2 !== null ? getStatus(currentO2) : null;
   
   if (isLoading && readings.length === 0) {
@@ -142,11 +144,11 @@ export function O2Page() {
         <Card>
           <CardHeader>
             <CardTitle>Optimal Range</CardTitle>
-            <CardDescription>Target values</CardDescription>
+            <CardDescription>Configured threshold</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl">6.0 - 12.0</span>
+              <span className="text-3xl">{thresholds.o2.lower} – {thresholds.o2.upper}</span>
               <span className="text-muted-foreground">%</span>
             </div>
           </CardContent>
