@@ -282,24 +282,27 @@ export function CorrelationPage() {
   const keyInsights = useMemo(() => {
     const insights: Array<{ type: "positive" | "negative" | "anomaly"; message: string }> = [];
 
-    // Temperature vs O2 (should be strongly negative)
-    const tempO2Corr = correlationMatrix.find((c) => 
+    // Temperature vs O2 — sensor is temperature-compensated, so near-zero correlation is expected and normal
+    const tempO2Corr = correlationMatrix.find((c) =>
       (c.param1 === "temp" && c.param2 === "o2") || (c.param1 === "o2" && c.param2 === "temp")
     );
-    if (tempO2Corr && tempO2Corr.coefficient > -0.5) {
-      insights.push({
-        type: "anomaly",
-        message: `Temp/O2 correlation is ${tempO2Corr.coefficient.toFixed(2)} (expected < -0.7). Check O2 sensor calibration.`,
-      });
-    } else if (tempO2Corr && tempO2Corr.coefficient < -0.7) {
-      insights.push({
-        type: "positive",
-        message: `Temp/O2 correlation is healthy at ${tempO2Corr.coefficient.toFixed(2)}.`,
-      });
+    if (tempO2Corr) {
+      const absCoeff = Math.abs(tempO2Corr.coefficient);
+      if (absCoeff < 0.3) {
+        insights.push({
+          type: "positive",
+          message: `Temp/O2 correlation is ${tempO2Corr.coefficient.toFixed(2)} — expected for a temperature-compensated O2 sensor.`,
+        });
+      } else if (absCoeff >= 0.6) {
+        insights.push({
+          type: "anomaly",
+          message: `Temp/O2 correlation is ${tempO2Corr.coefficient.toFixed(2)} — unusually high for a temperature-compensated sensor. Check sensor calibration.`,
+        });
+      }
     }
 
-    // EC vs pH (typically negative)
-    const ecPhCorr = correlationMatrix.find((c) => 
+    // EC vs pH — sensor is temperature-compensated, so exact correlation thresholds may vary
+    const ecPhCorr = correlationMatrix.find((c) =>
       (c.param1 === "ec" && c.param2 === "pH") || (c.param1 === "pH" && c.param2 === "ec")
     );
     if (ecPhCorr && ecPhCorr.coefficient < -0.3) {
@@ -307,10 +310,10 @@ export function CorrelationPage() {
         type: "positive",
         message: `EC/pH relationship is normal (${ecPhCorr.coefficient.toFixed(2)}). EC changes affect pH as expected.`,
       });
-    } else if (ecPhCorr && ecPhCorr.coefficient > 0) {
+    } else if (ecPhCorr && ecPhCorr.coefficient > 0.3) {
       insights.push({
         type: "anomaly",
-        message: `EC/pH correlation is positive (${ecPhCorr.coefficient.toFixed(2)}). Check dosing system.`,
+        message: `EC/pH correlation is unexpectedly positive (${ecPhCorr.coefficient.toFixed(2)}). Check dosing system.`,
       });
     }
 
