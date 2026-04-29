@@ -15,7 +15,7 @@ import domtoimage from "dom-to-image-more";
 import React from "react";
 import { downsample } from "../utils/downsample";
 
-type ParameterKey = "ec" | "pH" | "temp" | "waterLevel";
+type ParameterKey = "ec" | "pH" | "temp" | "o2";
 
 interface CorrelationData {
   param1: ParameterKey;
@@ -29,14 +29,14 @@ const PARAMETER_LABELS: Record<ParameterKey, string> = {
   ec: "EC",
   pH: "pH",
   temp: "Temperature",
-  waterLevel: "Water Level",
+  o2: "Dissolved Oxygen",
 };
 
 const PARAMETER_UNITS: Record<ParameterKey, string> = {
   ec: "μS/cm",
   pH: "",
   temp: "°F",
-  waterLevel: "inches",
+  o2: "%",
 };
 
 export function CorrelationPage() {
@@ -169,8 +169,8 @@ export function CorrelationPage() {
           return r.ph;
         case "temp":
           return r.temperature;
-        case "waterLevel":
-          return r.waterLevel;
+        case "o2":
+          return r.o2;
         default:
           return 0;
       }
@@ -179,7 +179,7 @@ export function CorrelationPage() {
 
   // Calculate correlation matrix
   const correlationMatrix = useMemo(() => {
-    const params: ParameterKey[] = ["ec", "pH", "temp", "waterLevel"];
+    const params: ParameterKey[] = ["ec", "pH", "temp", "o2"];
     const matrix: CorrelationData[] = [];
 
     for (let i = 0; i < params.length; i++) {
@@ -317,7 +317,7 @@ export function CorrelationPage() {
     return insights;
   }, [correlationMatrix]);
 
-  const params: ParameterKey[] = ["ec", "pH", "temp", "waterLevel"];
+  const params: ParameterKey[] = ["ec", "pH", "temp", "o2"];
 
   // Export correlation data to CSV
   const exportCorrelationData = () => {
